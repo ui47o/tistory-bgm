@@ -735,14 +735,13 @@
             const rect = titleEl.getBoundingClientRect();
             panel.style.left = rect.left + 'px';
             panel.style.width = rect.width + 'px';
-            panel.style.top = '-9999px'; // 잠깐 숨겨서 높이 측정
+            panel.style.top = '-9999px';
             panel.classList.add('open');
 
             requestAnimationFrame(function() {
                 const panelH = panel.offsetHeight;
-                let top = rect.top - panelH - 6;
-                if (top < 6) top = rect.bottom + 6;
-                panel.style.top = top + 'px';
+                // 항상 제목 위쪽에 표시
+                panel.style.top = (rect.top - panelH - 6) + 'px';
             });
         }
 
@@ -754,13 +753,7 @@
             }).join('');
         }
 
-        document.addEventListener('click', function(e) {
-            const panel = document.getElementById('playlistPanel');
-            if (!panel) return;
-            if (!e.target.closest('.playlist-panel') && !e.target.closest('#currentSongTitle')) {
-                panel.classList.remove('open');
-            }
-        }, true);
+        // 플레이리스트는 제목 클릭으로 토글, 항목 선택 시 자동 닫힘
 
         function pauseVideo() {
             if (player && player.pauseVideo) {
