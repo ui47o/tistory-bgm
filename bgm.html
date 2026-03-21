@@ -719,8 +719,8 @@
         function checkForUrlChange() {
             const currentURL = location.href;
             if (currentURL !== lastURL) {
+                _isInternalNav = true; // 내부 이동 표시
                 lastURL = currentURL;
-                // 페이지 이동 전 상태 저장
                 savePlayerState();
                 if (playerState.isPlaying && player && player.playVideo) {
                     let retries = 0;
@@ -750,6 +750,17 @@
                     player.playVideo();
                 }
             }
+        });
+
+        // 탭 닫거나 사이트 나갈 때 localStorage 청소
+        // (티스토리 내부 페이지 이동 시엔 청소 안 함)
+        let _isInternalNav = false;
+        window.addEventListener('beforeunload', function() {
+            if (!_isInternalNav) {
+                localStorage.removeItem(STORAGE_KEY);
+                localStorage.removeItem('bgm_repeat');
+            }
+            _isInternalNav = false;
         });
 
         // 페이지 로드 시 초기화
