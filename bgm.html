@@ -554,9 +554,12 @@
         }
 
         function onPlayerReady(event) {
-            // 초기 볼륨 설정
+            // 초기 볼륨 설정 (즉시 + 딜레이 두 번 적용으로 초기화 방지)
             player.setVolume(playerState.volume);
             document.getElementById('volumeSlider').value = playerState.volume;
+            setTimeout(function() {
+                player.setVolume(playerState.volume);
+            }, 500);
             
             // 현재 선택된 곡 설정
             if (playerState.currentSongId) {
