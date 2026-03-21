@@ -609,9 +609,7 @@
                     'controls': 0,
                     'start': Math.floor(playerState.currentTime),
                     'autoplay': playerState.isPlaying ? 1 : 0,
-                    'mute': 0,
-                    'loop': isRepeat ? 1 : 0,
-                    'playlist': isRepeat ? videoId : ''
+                    'mute': 0
                 },
                 events: {
                     'onReady': onPlayerReady,
@@ -729,16 +727,13 @@
             panel.classList.toggle('open');
             if (panel.classList.contains('open')) {
                 renderPlaylist();
-                // 제목 영역 위치 기준으로 팝업 위치 계산
                 const rect = titleEl.getBoundingClientRect();
-                const panelH = Math.min(200, songs.length * 30 + 10);
+                const panelH = Math.min(200, songs.length * 31 + 10);
                 let top = rect.top - panelH - 6;
-                let left = rect.left;
-                // 화면 밖으로 나가지 않도록 보정
-                if (top < 0) top = rect.bottom + 6;
-                if (left + 180 > window.innerWidth) left = window.innerWidth - 186;
+                if (top < 6) top = 6;
                 panel.style.top = top + 'px';
-                panel.style.left = left + 'px';
+                panel.style.left = rect.left + 'px';
+                panel.style.width = rect.width + 'px';
             }
         }
 
@@ -750,7 +745,6 @@
             }).join('');
         }
 
-        // 패널 외부 클릭 시 닫기
         document.addEventListener('click', function(e) {
             const panel = document.getElementById('playlistPanel');
             if (!panel) return;
