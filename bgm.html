@@ -398,10 +398,13 @@
     <script>
         // 특정 사이트에서 내부 페이지 이동 감지를 위한 URL 체크
         let lastURL = location.href;
-        
+
+        // 상태 키 설정
+        const STORAGE_KEY = 'bgm_player_state';
+
         // 프로그레스 바 업데이트 간격 (밀리초)
         const PROGRESS_UPDATE_INTERVAL = 500;
-        
+
         // 플레이리스트 변경
         // 여러 곡 추가 가능
         const songs = [
@@ -415,17 +418,16 @@
             // title은 제목 (플레이어에 보이게 될 제목)
         ];
 
-        // 플레이어 상태 (메모리로만 관리 - iframe이 유지되는 한 이어서 재생)
-        let playerState = {
-            isPlaying: false,
-            volume: 50,
-            currentTime: 0,
-            currentSongId: songs[0].id,
-            isMinimized: false
-        };
+        // 저장된 상태 불러오기
+        // 티스토리 외부에서 접속 시 초기화
+        const _ref = document.referrer ? new URL(document.referrer).hostname : '';
+        if (!_ref.includes('tistory.com')) localStorage.removeItem(STORAGE_KEY);
+
+        let playerState = JSON.parse(localStorage.getItem(STORAGE_KEY) ||
+            `{"isPlaying": false, "volume": 50, "currentTime": 0, "currentSongId": "${songs[0].id}", "isMinimized": false}`);
 
         // 반복재생 상태
-        let isRepeat = false;
+        let isRepeat = localStorage.getItem('bgm_repeat') === 'true';
 
         function applyRepeatUI() {
             const btn = document.getElementById('repeatBtn');
@@ -436,6 +438,7 @@
 
         function toggleRepeat() {
             isRepeat = !isRepeat;
+            localStorage.setItem('bgm_repeat', isRepeat);
             applyRepeatUI();
         }
 
@@ -555,11 +558,12 @@
             player = new YT.Player('player', {
                 height: '0',
                 width: '0',
-                videoId: songs[0].id,
+                videoId: playerState.currentSongId,
                 playerVars: {
                     'playsinline': 1,
                     'controls': 0,
-                    'autoplay': 0,
+                    'start': Math.floor(playerState.currentTime),
+                    'autoplay': playerState.isPlaying ? 1 : 0,
                     'mute': 0
                 },
                 events: {
@@ -574,8 +578,10 @@
             player.setVolume(playerState.volume);
             document.getElementById('volumeSlider').value = playerState.volume;
 
-            // 첫 번째 곡 제목 표시
-            updateSongTitle(songs[0].id);
+            // 현재 선택된 곡 설정
+            if (playerState.currentSongId) {
+                updateSongTitle(playerState.currentSongId);
+            }
 
             // 반복 UI 복원
             applyRepeatUI();
@@ -585,11 +591,12 @@
                 player.playVideo();
             }
 
-            // 볼륨 변경 리스너
+            // 볼륨 변경 리스너 추가
             document.getElementById('volumeSlider').addEventListener('input', function(e) {
                 const volume = parseInt(e.target.value);
                 player.setVolume(volume);
                 playerState.volume = volume;
+                savePlayerState();
             });
 
             // 상태 주기적으로 저장
@@ -598,11 +605,12 @@
             // 프로그레스 바 주기적으로 업데이트
             progressInterval = setInterval(updateProgressBar, PROGRESS_UPDATE_INTERVAL);
 
-            // URL 변경 감지
+            // URL 변경 감지 (티스토리 내 페이지 이동)
             setInterval(checkForUrlChange, 1000);
         }
 
         function onPlayerStateChange(event) {
+            // 재생 상태 업데이트
             playerState.isPlaying = event.data === YT.PlayerState.PLAYING;
 
             // 곡이 끝났을 때
@@ -615,13 +623,20 @@
                 }
             }
 
+            // 재생 상태에 따라 프로그레스 바 업데이트 여부 결정
             if (event.data === YT.PlayerState.PLAYING) {
-                if (progressInterval) clearInterval(progressInterval);
+                if (progressInterval) {
+                    clearInterval(progressInterval);
+                }
                 progressInterval = setInterval(updateProgressBar, PROGRESS_UPDATE_INTERVAL);
             } else if (event.data === YT.PlayerState.PAUSED || event.data === YT.PlayerState.ENDED) {
                 updateProgressBar();
-                if (progressInterval) { clearInterval(progressInterval); progressInterval = null; }
+                if (progressInterval) {
+                    clearInterval(progressInterval);
+                    progressInterval = null;
+                }
             }
+
             savePlayerState();
         }
 
@@ -641,6 +656,7 @@
             if (player && player.getCurrentTime) {
                 playerState.currentTime = player.getCurrentTime();
                 playerState.isPlaying = player.getPlayerState() === YT.PlayerState.PLAYING;
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(playerState));
             }
         }
 
@@ -730,7 +746,9 @@
 
         // 페이지 로드 시 초기화
         window.onload = function() {
-            updateSongTitle(songs[0].id);
+            if (playerState.currentSongId) {
+                updateSongTitle(playerState.currentSongId);
+            }
         };
 
     </script>
