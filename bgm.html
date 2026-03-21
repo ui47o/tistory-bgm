@@ -591,9 +591,19 @@
             // 반복 UI 복원
             applyRepeatUI();
 
-            // 이전에 재생 중이었다면 다시 재생
+            // 이전에 재생 중이었다면 다시 재생 (실패 시 재시도)
             if (playerState.isPlaying) {
                 player.playVideo();
+                let retries = 0;
+                const tryPlay = setInterval(function() {
+                    if (!player || !player.getPlayerState) { clearInterval(tryPlay); return; }
+                    if (player.getPlayerState() === YT.PlayerState.PLAYING) {
+                        clearInterval(tryPlay);
+                    } else {
+                        player.playVideo();
+                    }
+                    if (++retries >= 10) clearInterval(tryPlay);
+                }, 500);
             }
 
             // 볼륨 변경 리스너 추가
