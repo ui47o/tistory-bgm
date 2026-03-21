@@ -443,23 +443,7 @@
 
         document.addEventListener('DOMContentLoaded', applyRepeatUI);
 
-        // 페이지 이동 직전 정확한 재생 위치 저장
-        window.addEventListener('beforeunload', function() {
-            if (player && player.getCurrentTime) {
-                playerState.currentTime = player.getCurrentTime();
-                playerState.isPlaying = player.getPlayerState() === YT.PlayerState.PLAYING;
-                localStorage.setItem(STORAGE_KEY, JSON.stringify(playerState));
-            }
-        });
 
-        // pagehide도 동일하게 저장 (모바일/일부 브라우저 대응)
-        window.addEventListener('pagehide', function() {
-            if (player && player.getCurrentTime) {
-                playerState.currentTime = player.getCurrentTime();
-                playerState.isPlaying = player.getPlayerState() === YT.PlayerState.PLAYING;
-                localStorage.setItem(STORAGE_KEY, JSON.stringify(playerState));
-            }
-        });
 
         
         // 특정 ID의 곡 재생
@@ -638,13 +622,10 @@
         }
 
         function onPlayerReady(event) {
-            // 초기 볼륨 설정 (즉시 + 딜레이 두 번 적용으로 초기화 방지)
+            // 초기 볼륨 설정
             player.setVolume(playerState.volume);
             document.getElementById('volumeSlider').value = playerState.volume;
-            setTimeout(function() {
-                player.setVolume(playerState.volume);
-            }, 500);
-            
+
             // 현재 선택된 곡 제목 표시 (없으면 첫 번째 곡)
             const titleId = playerState.currentSongId || (songs.length ? songs[0].id : null);
             if (titleId) updateSongTitle(titleId);
@@ -652,9 +633,8 @@
             // 반복 UI 복원
             applyRepeatUI();
 
-            // 이전에 재생 중이었다면 즉시 재생 + 위치 복원
+            // 이전에 재생 중이었다면 다시 재생 (견본 방식)
             if (playerState.isPlaying) {
-                player.seekTo(playerState.currentTime, true);
                 player.playVideo();
             }
 
@@ -666,13 +646,13 @@
                 savePlayerState();
             });
 
-            // 상태 더 자주 저장 (200ms)
-            setInterval(savePlayerState, 200);
-            
+            // 상태 주기적으로 저장
+            setInterval(savePlayerState, 1000);
+
             // 프로그레스 바 주기적으로 업데이트
             progressInterval = setInterval(updateProgressBar, PROGRESS_UPDATE_INTERVAL);
-            
-            // URL 변경 감지 (티스토리 내 페이지 이동)
+
+            // URL 변경 감지
             setInterval(checkForUrlChange, 1000);
         }
 
@@ -838,16 +818,15 @@
             savePlayerState();
         }
         
-        // URL 변경 감지 (티스토리 내 페이지 이동)
+        // URL 변경 감지 (견본 방식)
         function checkForUrlChange() {
             const currentURL = location.href;
             if (currentURL !== lastURL) {
                 lastURL = currentURL;
-                // 페이지가 바뀌었을 때 재생 상태 유지
                 if (playerState.isPlaying && player && player.playVideo) {
                     setTimeout(() => {
                         player.playVideo();
-                    }, 0); // 약간의 지연을 두어 페이지 전환이 완료된 후 재생
+                    }, 0);
                 }
             }
         }
@@ -866,44 +845,7 @@
             }
         });
 
-        // 재생 재시도 공통 함수
-        function tryResumePlay() {
-            // localStorage에서 최신 상태 다시 읽기 (페이지 이동 직전 저장된 값)
-            const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
-            if (!saved.isPlaying) return; // 일시정지 상태면 재생 안 함
-            playerState = Object.assign(playerState, saved);
 
-            let retries = 0;
-            const savedTime = playerState.currentTime;
-            const tryPlay = setInterval(function() {
-                if (player && player.playVideo && player.getPlayerState) {
-                    const state = player.getPlayerState();
-                    if (state !== YT.PlayerState.PLAYING) {
-                        player.seekTo(savedTime, true);
-                        player.playVideo();
-                    } else {
-                        clearInterval(tryPlay);
-                    }
-                    retries++;
-                    if (retries >= 10) clearInterval(tryPlay);
-                }
-            }, 300);
-        }
-
-        // 뒤로 가기 / 앞으로 가기 (bfcache 복원)
-        window.addEventListener('pageshow', function(e) {
-            if (e.persisted) tryResumePlay();
-        });
-
-        // 새로고침 / 일반 페이지 로드
-        window.addEventListener('load', function() {
-            tryResumePlay();
-        });
-
-        // popstate (뒤로/앞으로 가기 추가 감지)
-        window.addEventListener('popstate', function() {
-            tryResumePlay();
-        });
         
         // 페이지 로드 시 초기화
         window.onload = function() {
