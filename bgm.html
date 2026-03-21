@@ -132,6 +132,16 @@
             cursor: pointer;
             font-size: 10px;
         }
+        .playlist-btn {
+            position: absolute;
+            top: 6px;
+            left: 6px;
+            background: none;
+            border: none;
+            color: var(--bgm-font);
+            cursor: pointer;
+            font-size: 10px;
+        }
         .mini-player {
             position: fixed;
             top: 0px;
@@ -213,6 +223,42 @@
             color: var(--bgm-font);
             margin-top: 3px;
         }
+
+        /* 플레이리스트 */
+        .playlist-panel {
+            position: absolute;
+            bottom: 100%;
+            left: 0;
+            width: 100%;
+            background: var(--bgm-main);
+            border: 1.5px solid var(--bgm-mdark2);
+            border-radius: 8px;
+            margin-bottom: 6px;
+            max-height: 160px;
+            overflow-y: auto;
+            box-shadow: 0 -4px 12px rgba(0,0,0,0.1);
+            display: none;
+        }
+        .playlist-panel.open {
+            display: block;
+        }
+        .playlist-item {
+            padding: 7px 12px;
+            font-size: 10px;
+            color: var(--bgm-font);
+            cursor: pointer;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            transition: background 0.2s;
+        }
+        .playlist-item:hover {
+            background: var(--bgm-mdark2);
+        }
+        .playlist-item.playing {
+            color: var(--bgm-mdark);
+            font-weight: bold;
+        }
         
     </style>
 </head>
@@ -227,6 +273,9 @@
         <div class="bgm-player">
             <button class="minimize-btn" onclick="minimizePlayer()">
                 <i class="fas fa-minus"></i>
+            </button>
+            <button class="playlist-btn" onclick="togglePlaylist()">
+                <i class="fas fa-list"></i>
             </button>
             <div id="player"></div>
             
@@ -246,6 +295,9 @@
             </div>
 
             
+            <div style="position:relative;">
+                <div class="playlist-panel" id="playlistPanel"></div>
+            </div>
             <div class="control-buttons">
                 <button class="control-btn" onclick="prevSong()" title="이전 곡">
                     <i class="fas fa-step-backward"></i>
@@ -258,6 +310,9 @@
                 </button>
                 <button class="control-btn" onclick="nextSong()" title="다음 곡">
                     <i class="fas fa-step-forward"></i>
+                </button>
+                <button class="control-btn" id="repeatBtn" onclick="toggleRepeat()" title="반복재생">
+                    <i class="fas fa-redo"></i>
                 </button>
             </div>
 
@@ -369,8 +424,56 @@
         // 저장된 상태 불러오기
         let playerState = JSON.parse(localStorage.getItem(STORAGE_KEY) || 
             `{"isPlaying": false, "volume": 50, "currentTime": 0, "currentSongId": "${songs[0].id}", "isMinimized": false}`);
+
+        let isRepeat = localStorage.getItem('bgm_repeat') === 'true';
+
+        function applyRepeatUI() {
+            const btn = document.getElementById('repeatBtn');
+            if (!btn) return;
+            btn.style.color = isRepeat ? 'white' : 'var(--bgm-font)';
+            btn.style.backgroundColor = isRepeat ? 'var(--bgm-mdark)' : 'var(--bgm-bright)';
+        }
+
+        function toggleRepeat() {
+            isRepeat = !isRepeat;
+            localStorage.setItem('bgm_repeat', isRepeat);
+            applyRepeatUI();
+            // YouTube loop 파라미터 적용 (단일곡 반복)
+            if (player && player.setLoop) {
+                player.setLoop(isRepeat);
+                if (isRepeat) {
+                    player.cueVideoById({
+                        videoId: playerState.currentSongId,
+                        startSeconds: player.getCurrentTime()
+                    });
+                    player.playVideo();
+                }
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', applyRepeatUI);
         
 
+
+        // 반복재생 상태 (localStorage로 유지)
+        let isRepeat = localStorage.getItem('bgm_repeat') === 'true';
+
+        function applyRepeatUI() {
+            const btn = document.getElementById('repeatBtn');
+            if (!btn) return;
+            btn.style.color = isRepeat ? 'white' : 'var(--bgm-font)';
+            btn.style.backgroundColor = isRepeat ? 'var(--bgm-mdark)' : 'var(--bgm-bright)';
+        }
+
+        function toggleRepeat() {
+            isRepeat = !isRepeat;
+            localStorage.setItem('bgm_repeat', isRepeat);
+            applyRepeatUI();
+            // YouTube 플레이어 loop 설정 (JS 개입 없이 자체 반복 → 끊김 없음)
+            if (player && player.setLoop) player.setLoop(isRepeat);
+        }
+
+        document.addEventListener('DOMContentLoaded', applyRepeatUI);
 
         // 페이지 이동 직전 정확한 재생 위치 저장
         window.addEventListener('beforeunload', function() {
@@ -546,7 +649,9 @@
                     'controls': 0,
                     'start': Math.floor(playerState.currentTime),
                     'autoplay': playerState.isPlaying ? 1 : 0,
-                    'mute': 0
+                    'mute': 0,
+                    'loop': isRepeat ? 1 : 0,
+                    'playlist': isRepeat ? videoId : ''
                 },
                 events: {
                     'onReady': onPlayerReady,
@@ -567,6 +672,14 @@
             if (playerState.currentSongId) {
                 updateSongTitle(playerState.currentSongId);
             }
+
+            // 반복 UI 복원
+            applyRepeatUI();
+            if (isRepeat) player.setLoop(true);
+
+            // 반복 상태 초기 적용
+            if (player.setLoop) player.setLoop(isRepeat);
+            applyRepeatUI();
 
             // 이전에 재생 중이었다면 즉시 재생 + 위치 복원
             if (playerState.isPlaying) {
@@ -596,9 +709,9 @@
             // 재생 상태 업데이트
             playerState.isPlaying = event.data === YT.PlayerState.PLAYING;
             
-            // 곡이 끝났을 때 다음 곡 자동 재생
+            // 곡이 끝났을 때 반복 또는 다음 곡
             if (event.data === YT.PlayerState.ENDED) {
-                nextSong();
+                if (!isRepeat) nextSong();
             }
             
             // 재생 상태에 따라 프로그레스 바 업데이트 여부 결정
@@ -650,6 +763,29 @@
                 player.playVideo();
             }
         }
+
+        function togglePlaylist() {
+            const panel = document.getElementById('playlistPanel');
+            panel.classList.toggle('open');
+            if (panel.classList.contains('open')) renderPlaylist();
+        }
+
+        function renderPlaylist() {
+            const panel = document.getElementById('playlistPanel');
+            panel.innerHTML = songs.map((song, i) => {
+                const isCurrent = song.id === playerState.currentSongId;
+                return `<div class="playlist-item${isCurrent ? ' playing' : ''}" onclick="playSongById('${song.id}');togglePlaylist();">${i+1}. ${song.title}</div>`;
+            }).join('');
+        }
+
+        // 패널 외부 클릭 시 닫기
+        document.addEventListener('click', function(e) {
+            const panel = document.getElementById('playlistPanel');
+            if (!panel) return;
+            if (!e.target.closest('.playlist-panel') && !e.target.closest('[onclick*="togglePlaylist"]')) {
+                panel.classList.remove('open');
+            }
+        });
 
         function pauseVideo() {
             if (player && player.pauseVideo) {
