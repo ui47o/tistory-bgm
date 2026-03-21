@@ -452,6 +452,15 @@
             }
         });
 
+        // pagehide도 동일하게 저장 (모바일/일부 브라우저 대응)
+        window.addEventListener('pagehide', function() {
+            if (player && player.getCurrentTime) {
+                playerState.currentTime = player.getCurrentTime();
+                playerState.isPlaying = player.getPlayerState() === YT.PlayerState.PLAYING;
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(playerState));
+            }
+        });
+
         
         // 특정 ID의 곡 재생
         function playSongById(songId) {
@@ -725,6 +734,15 @@
             }
         }
 
+        // 100ms마다 currentTime만 빠르게 저장 (페이지 이동 직전 위치 정확도 향상)
+        setInterval(function() {
+            if (player && player.getCurrentTime && player.getPlayerState &&
+                player.getPlayerState() === YT.PlayerState.PLAYING) {
+                playerState.currentTime = player.getCurrentTime();
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(playerState));
+            }
+        }, 100);
+
         function playVideo() {
             if (player && player.playVideo) {
                 player.playVideo();
@@ -850,13 +868,18 @@
 
         // 재생 재시도 공통 함수
         function tryResumePlay() {
-            if (!playerState.isPlaying) return;
+            // localStorage에서 최신 상태 다시 읽기 (페이지 이동 직전 저장된 값)
+            const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+            if (!saved.isPlaying) return; // 일시정지 상태면 재생 안 함
+            playerState = Object.assign(playerState, saved);
+
             let retries = 0;
+            const savedTime = playerState.currentTime;
             const tryPlay = setInterval(function() {
                 if (player && player.playVideo && player.getPlayerState) {
                     const state = player.getPlayerState();
                     if (state !== YT.PlayerState.PLAYING) {
-                        player.seekTo(playerState.currentTime, true);
+                        player.seekTo(savedTime, true);
                         player.playVideo();
                     } else {
                         clearInterval(tryPlay);
