@@ -415,7 +415,7 @@
             // title은 제목 (플레이어에 보이게 될 제목)
         ];
 
-        // 플레이어 상태 (localStorage 없이 메모리로만 관리)
+        // 플레이어 상태 (메모리로만 관리 - iframe이 유지되는 한 이어서 재생)
         let playerState = {
             isPlaying: false,
             volume: 50,
@@ -424,7 +424,7 @@
             isMinimized: false
         };
 
-        // 반복재생 상태 (세션 중에만 유지)
+        // 반복재생 상태
         let isRepeat = false;
 
         function applyRepeatUI() {
@@ -465,6 +465,7 @@
                 document.getElementById('progressThumb').style.left = '0%';
                 document.getElementById('currentTime').textContent = '0:00';
             }
+            savePlayerState();
         }
 
         // 시간 포맷 함수 (초 -> MM:SS)
@@ -591,6 +592,9 @@
                 playerState.volume = volume;
             });
 
+            // 상태 주기적으로 저장
+            setInterval(savePlayerState, 1000);
+
             // 프로그레스 바 주기적으로 업데이트
             progressInterval = setInterval(updateProgressBar, PROGRESS_UPDATE_INTERVAL);
 
@@ -618,6 +622,7 @@
                 updateProgressBar();
                 if (progressInterval) { clearInterval(progressInterval); progressInterval = null; }
             }
+            savePlayerState();
         }
 
         // 프로그레스 바 업데이트 함수
@@ -630,6 +635,13 @@
             document.getElementById('progressThumb').style.left = `${progress}%`;
             document.getElementById('currentTime').textContent = formatTime(currentTime);
             document.getElementById('totalTime').textContent = formatTime(duration);
+        }
+
+        function savePlayerState() {
+            if (player && player.getCurrentTime) {
+                playerState.currentTime = player.getCurrentTime();
+                playerState.isPlaying = player.getPlayerState() === YT.PlayerState.PLAYING;
+            }
         }
 
         function playVideo() {
@@ -681,12 +693,14 @@
             document.getElementById('mainPlayer').classList.add('hidden');
             document.getElementById('miniPlayer').classList.remove('hidden');
             playerState.isMinimized = true;
+            savePlayerState();
         }
 
         function expandPlayer() {
             document.getElementById('mainPlayer').classList.remove('hidden');
             document.getElementById('miniPlayer').classList.add('hidden');
             playerState.isMinimized = false;
+            savePlayerState();
         }
 
         // URL 변경 감지 (티스토리 내 페이지 이동)
@@ -705,6 +719,7 @@
             if (document.hidden) {
                 if (player && player.getPlayerState) {
                     playerState.isPlaying = player.getPlayerState() === YT.PlayerState.PLAYING;
+                    savePlayerState();
                 }
             } else {
                 if (playerState.isPlaying && player && player.playVideo) {
