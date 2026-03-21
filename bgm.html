@@ -419,15 +419,6 @@
         const STORAGE_KEY = 'bgm_player_state';
 
         // 저장된 상태 불러오기
-        // referrer가 tistory.com이 아니면 외부 접속 → 초기화
-        (function() {
-            const ref = document.referrer;
-            if (!ref || !ref.includes('tistory.com')) {
-                localStorage.removeItem(STORAGE_KEY);
-                localStorage.removeItem('bgm_repeat');
-            }
-        })();
-
         let playerState = JSON.parse(localStorage.getItem(STORAGE_KEY) ||
             `{"isPlaying": false, "volume": 50, "currentTime": 0, "currentSongId": "${songs[0].id}", "isMinimized": false}`);
 
@@ -602,7 +593,7 @@
                     } else {
                         player.playVideo();
                     }
-                    if (++retries >= 10) clearInterval(tryPlay);
+                    if (++retries >= 20) clearInterval(tryPlay);
                 }, 500);
             }
 
@@ -773,6 +764,14 @@
         window.addEventListener('beforeunload', function() {
             savePlayerState();
             localStorage.setItem('bgm_repeat', isRepeat);
+        });
+
+        // 탭 닫힐 때 localStorage 초기화
+        window.addEventListener('pagehide', function(e) {
+            if (!e.persisted) {
+                localStorage.removeItem(STORAGE_KEY);
+                localStorage.removeItem('bgm_repeat');
+            }
         });
 
         // 페이지 로드 시 초기화
