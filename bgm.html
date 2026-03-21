@@ -340,6 +340,7 @@
         window.addEventListener('message', function(e) {
             if (e.data === 'night' || e.data === 'dark') applyTheme('dark');
             else if (e.data === 'day' || e.data === 'light') applyTheme('light');
+            else if (e.data && e.data.action === 'selectSong') playSongById(e.data.songId);
         });
     })();
 	</script>
@@ -724,25 +725,12 @@
         }
 
         function togglePlaylist() {
-            const panel = document.getElementById('playlistPanel');
-            const titleEl = document.getElementById('currentSongTitle');
-            const isOpen = panel.classList.contains('open');
-
-            panel.classList.remove('open');
-            if (isOpen) return;
-
-            renderPlaylist();
-            const rect = titleEl.getBoundingClientRect();
-            panel.style.left = rect.left + 'px';
-            panel.style.width = rect.width + 'px';
-            panel.style.top = '-9999px';
-            panel.classList.add('open');
-
-            requestAnimationFrame(function() {
-                const panelH = panel.offsetHeight;
-                // 항상 제목 위쪽에 표시
-                panel.style.top = (rect.top - panelH - 6) + 'px';
-            });
+            // skin.html(부모)에 플레이리스트 토글 메시지 전송
+            window.parent.postMessage({
+                action: 'togglePlaylist',
+                songs: songs,
+                currentSongId: playerState.currentSongId
+            }, '*');
         }
 
         function renderPlaylist() {
