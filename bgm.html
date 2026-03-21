@@ -259,9 +259,6 @@
                 <button class="control-btn" onclick="nextSong()" title="다음 곡">
                     <i class="fas fa-step-forward"></i>
                 </button>
-                <button class="control-btn" id="repeatBtn" onclick="toggleRepeat()" title="반복재생">
-                    <i class="fas fa-redo"></i>
-                </button>
             </div>
 
             <div class="volume-control">
@@ -373,29 +370,7 @@
         let playerState = JSON.parse(localStorage.getItem(STORAGE_KEY) || 
             `{"isPlaying": false, "volume": 50, "currentTime": 0, "currentSongId": "${songs[0].id}", "isMinimized": false}`);
         
-        let isRepeat = localStorage.getItem('bgm_repeat') === 'true';
 
-        function applyRepeatUI() {
-            const btn = document.getElementById('repeatBtn');
-            if (!btn) return;
-            btn.style.color = isRepeat ? 'white' : 'var(--bgm-font)';
-            btn.style.backgroundColor = isRepeat ? 'var(--bgm-mdark)' : 'var(--bgm-bright)';
-        }
-
-        function toggleRepeat() {
-            isRepeat = !isRepeat;
-            localStorage.setItem('bgm_repeat', isRepeat);
-            applyRepeatUI();
-            // YouTube 플레이어 loop 설정
-            if (player && player.setLoop) {
-                player.setLoop(isRepeat);
-            }
-        }
-
-        // 페이지 로드 시 반복 상태 UI 복원
-        document.addEventListener('DOMContentLoaded', function() {
-            applyRepeatUI();
-        });
 
         // 페이지 이동 직전 정확한 재생 위치 저장
         window.addEventListener('beforeunload', function() {
@@ -593,9 +568,6 @@
                 updateSongTitle(playerState.currentSongId);
             }
 
-            // loop 초기 설정
-            if (player.setLoop) player.setLoop(isRepeat);
-
             // 이전에 재생 중이었다면 즉시 재생 + 위치 복원
             if (playerState.isPlaying) {
                 player.seekTo(playerState.currentTime, true);
@@ -624,13 +596,9 @@
             // 재생 상태 업데이트
             playerState.isPlaying = event.data === YT.PlayerState.PLAYING;
             
-            // 곡이 끝났을 때 반복 또는 다음 곡
+            // 곡이 끝났을 때 다음 곡 자동 재생
             if (event.data === YT.PlayerState.ENDED) {
-                if (isRepeat) {
-                    playSongById(playerState.currentSongId);
-                } else {
-                    nextSong();
-                }
+                nextSong();
             }
             
             // 재생 상태에 따라 프로그레스 바 업데이트 여부 결정
