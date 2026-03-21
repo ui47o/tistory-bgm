@@ -419,15 +419,12 @@
         const STORAGE_KEY = 'bgm_player_state';
 
         // 저장된 상태 불러오기
-        // _internal 플래그가 없으면 외부 접속 → 초기화
+        // referrer가 tistory.com이 아니면 외부 접속 → 초기화
         (function() {
-            const saved = localStorage.getItem(STORAGE_KEY);
-            if (saved) {
-                const data = JSON.parse(saved);
-                if (!data._internal) {
-                    localStorage.removeItem(STORAGE_KEY);
-                    localStorage.removeItem('bgm_repeat');
-                }
+            const ref = document.referrer;
+            if (!ref || !ref.includes('tistory.com')) {
+                localStorage.removeItem(STORAGE_KEY);
+                localStorage.removeItem('bgm_repeat');
             }
         })();
 
@@ -731,7 +728,6 @@
         function checkForUrlChange() {
             const currentURL = location.href;
             if (currentURL !== lastURL) {
-                _isInternalNav = true;
                 lastURL = currentURL;
                 if (playerState.isPlaying && player && player.playVideo) {
                     let retries = 0;
@@ -763,29 +759,10 @@
             }
         });
 
-        // 사이트 이탈 직전: 현재 상태 저장 + 내부이동 플래그 설정
-        // 티스토리 내 이동이면 새 페이지에서 플래그 확인 후 복원
-        // 외부 이탈이면 새 접속 시 플래그 없어서 초기화
-        let _isInternalNav = false;
+        // 페이지 이탈 직전 항상 현재 상태 저장
         window.addEventListener('beforeunload', function() {
-            if (_isInternalNav) {
-                // 내부 이동: 현재 상태 저장 + 플래그 설정
-                savePlayerState();
-                playerState._internal = true;
-                localStorage.setItem(STORAGE_KEY, JSON.stringify(playerState));
-                localStorage.setItem('bgm_repeat', isRepeat);
-            } else {
-                // 외부 이탈: 플래그 없이 초기값 저장
-                const resetState = {
-                    isPlaying: false,
-                    volume: playerState.volume,
-                    currentTime: 0,
-                    currentSongId: songs[0].id,
-                    isMinimized: playerState.isMinimized
-                };
-                localStorage.setItem(STORAGE_KEY, JSON.stringify(resetState));
-                localStorage.setItem('bgm_repeat', 'false');
-            }
+            savePlayerState();
+            localStorage.setItem('bgm_repeat', isRepeat);
         });
 
         // 페이지 로드 시 초기화
