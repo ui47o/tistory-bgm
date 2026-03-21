@@ -259,6 +259,9 @@
                 <button class="control-btn" onclick="nextSong()" title="다음 곡">
                     <i class="fas fa-step-forward"></i>
                 </button>
+                <button class="control-btn" id="repeatBtn" onclick="toggleRepeat()" title="반복재생">
+                    <i class="fas fa-redo"></i>
+                </button>
             </div>
 
             <div class="volume-control">
@@ -369,6 +372,15 @@
         // 저장된 상태 불러오기
         let playerState = JSON.parse(localStorage.getItem(STORAGE_KEY) || 
             `{"isPlaying": false, "volume": 50, "currentTime": 0, "currentSongId": "${songs[0].id}", "isMinimized": false}`);
+        
+        let isRepeat = false;
+
+        function toggleRepeat() {
+            isRepeat = !isRepeat;
+            const btn = document.getElementById('repeatBtn');
+            btn.style.color = isRepeat ? 'white' : 'var(--bgm-font)';
+            btn.style.backgroundColor = isRepeat ? 'var(--bgm-mdark)' : 'var(--bgm-bright)';
+        }
 
         // 페이지 이동 직전 정확한 재생 위치 저장
         window.addEventListener('beforeunload', function() {
@@ -554,9 +566,12 @@
         }
 
         function onPlayerReady(event) {
-            // 초기 볼륨 설정
+            // 초기 볼륨 설정 (즉시 + 딜레이 두 번 적용으로 초기화 방지)
             player.setVolume(playerState.volume);
             document.getElementById('volumeSlider').value = playerState.volume;
+            setTimeout(function() {
+                player.setVolume(playerState.volume);
+            }, 500);
             
             // 현재 선택된 곡 설정
             if (playerState.currentSongId) {
@@ -591,9 +606,14 @@
             // 재생 상태 업데이트
             playerState.isPlaying = event.data === YT.PlayerState.PLAYING;
             
-            // 곡이 끝났을 때 다음 곡 자동 재생
+            // 곡이 끝났을 때 반복 또는 다음 곡
             if (event.data === YT.PlayerState.ENDED) {
-                nextSong();
+                if (isRepeat) {
+                    player.seekTo(0);
+                    player.playVideo();
+                } else {
+                    nextSong();
+                }
             }
             
             // 재생 상태에 따라 프로그레스 바 업데이트 여부 결정
