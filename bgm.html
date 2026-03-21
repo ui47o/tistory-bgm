@@ -343,6 +343,11 @@
             if (e.data === 'night' || e.data === 'dark') applyTheme('dark');
             else if (e.data === 'day' || e.data === 'light') applyTheme('light');
             else if (e.data && e.data.action === 'selectSong') playSongById(e.data.songId);
+            else if (e.data && e.data.action === 'resume') {
+                if (playerState.isPlaying && player && player.playVideo) {
+                    player.playVideo();
+                }
+            }
         });
     })();
 	</script>
@@ -845,8 +850,21 @@
 
         // 뒤로 가기(bfcache) 복원 시 즉시 재생
         window.addEventListener('pageshow', function(e) {
-            if (e.persisted && playerState.isPlaying && player && player.playVideo) {
-                player.playVideo();
+            if (e.persisted && playerState.isPlaying) {
+                let retries = 0;
+                const tryPlay = setInterval(function() {
+                    if (player && player.playVideo && player.getPlayerState) {
+                        const state = player.getPlayerState();
+                        if (state !== YT.PlayerState.PLAYING) {
+                            player.seekTo(playerState.currentTime, true);
+                            player.playVideo();
+                        } else {
+                            clearInterval(tryPlay);
+                        }
+                        retries++;
+                        if (retries >= 10) clearInterval(tryPlay);
+                    }
+                }, 300);
             }
         });
         
