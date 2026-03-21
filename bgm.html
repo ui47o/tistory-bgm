@@ -81,7 +81,9 @@
             border-radius: 50%;
             cursor: pointer;
             font-size: 10px;
+            display: flex;
             align-items: center;
+            justify-content: center;
             transition: all 0.3s ease;
 			border: 1.5px solid var(--bgm-mdark2);
         }
@@ -838,6 +840,13 @@
                 if (playerState.isPlaying && player && player.playVideo) {
                     player.playVideo();
                 }
+            }
+        });
+
+        // 뒤로 가기(bfcache) 복원 시 즉시 재생
+        window.addEventListener('pageshow', function(e) {
+            if (e.persisted && playerState.isPlaying && player && player.playVideo) {
+                player.playVideo();
             }
         });
         
