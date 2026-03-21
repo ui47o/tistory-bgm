@@ -609,7 +609,9 @@
                     'controls': 0,
                     'start': Math.floor(playerState.currentTime),
                     'autoplay': playerState.isPlaying ? 1 : 0,
-                    'mute': 0
+                    'mute': 0,
+                    'origin': location.hostname,
+                    'rel': 0
                 },
                 events: {
                     'onReady': onPlayerReady,
@@ -724,17 +726,24 @@
         function togglePlaylist() {
             const panel = document.getElementById('playlistPanel');
             const titleEl = document.getElementById('currentSongTitle');
-            panel.classList.toggle('open');
-            if (panel.classList.contains('open')) {
-                renderPlaylist();
-                const rect = titleEl.getBoundingClientRect();
-                const panelH = Math.min(200, songs.length * 31 + 10);
+            const isOpen = panel.classList.contains('open');
+
+            panel.classList.remove('open');
+            if (isOpen) return;
+
+            renderPlaylist();
+            const rect = titleEl.getBoundingClientRect();
+            panel.style.left = rect.left + 'px';
+            panel.style.width = rect.width + 'px';
+            panel.style.top = '-9999px'; // 잠깐 숨겨서 높이 측정
+            panel.classList.add('open');
+
+            requestAnimationFrame(function() {
+                const panelH = panel.offsetHeight;
                 let top = rect.top - panelH - 6;
-                if (top < 6) top = 6;
+                if (top < 6) top = rect.bottom + 6;
                 panel.style.top = top + 'px';
-                panel.style.left = rect.left + 'px';
-                panel.style.width = rect.width + 'px';
-            }
+            });
         }
 
         function renderPlaylist() {
@@ -751,7 +760,7 @@
             if (!e.target.closest('.playlist-panel') && !e.target.closest('#currentSongTitle')) {
                 panel.classList.remove('open');
             }
-        });
+        }, true);
 
         function pauseVideo() {
             if (player && player.pauseVideo) {
