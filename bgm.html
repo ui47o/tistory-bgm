@@ -418,7 +418,19 @@
         // 상태 키 설정
         const STORAGE_KEY = 'bgm_player_state';
 
-        // 저장된 상태 불러오기 (견본 방식)
+        // 저장된 상태 불러오기
+        // _internal 플래그가 없으면 외부 접속 → 초기화
+        (function() {
+            const saved = localStorage.getItem(STORAGE_KEY);
+            if (saved) {
+                const data = JSON.parse(saved);
+                if (!data._internal) {
+                    localStorage.removeItem(STORAGE_KEY);
+                    localStorage.removeItem('bgm_repeat');
+                }
+            }
+        })();
+
         let playerState = JSON.parse(localStorage.getItem(STORAGE_KEY) ||
             `{"isPlaying": false, "volume": 50, "currentTime": 0, "currentSongId": "${songs[0].id}", "isMinimized": false}`);
 
@@ -719,9 +731,8 @@
         function checkForUrlChange() {
             const currentURL = location.href;
             if (currentURL !== lastURL) {
-                _isInternalNav = true; // 내부 이동 표시
+                _isInternalNav = true;
                 lastURL = currentURL;
-                savePlayerState();
                 if (playerState.isPlaying && player && player.playVideo) {
                     let retries = 0;
                     const tryPlay = setInterval(function() {
@@ -752,15 +763,29 @@
             }
         });
 
-        // 탭 닫거나 사이트 나갈 때 localStorage 청소
-        // (티스토리 내부 페이지 이동 시엔 청소 안 함)
+        // 사이트 이탈 직전: 현재 상태 저장 + 내부이동 플래그 설정
+        // 티스토리 내 이동이면 새 페이지에서 플래그 확인 후 복원
+        // 외부 이탈이면 새 접속 시 플래그 없어서 초기화
         let _isInternalNav = false;
         window.addEventListener('beforeunload', function() {
-            if (!_isInternalNav) {
-                localStorage.removeItem(STORAGE_KEY);
-                localStorage.removeItem('bgm_repeat');
+            if (_isInternalNav) {
+                // 내부 이동: 현재 상태 저장 + 플래그 설정
+                savePlayerState();
+                playerState._internal = true;
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(playerState));
+                localStorage.setItem('bgm_repeat', isRepeat);
+            } else {
+                // 외부 이탈: 플래그 없이 초기값 저장
+                const resetState = {
+                    isPlaying: false,
+                    volume: playerState.volume,
+                    currentTime: 0,
+                    currentSongId: songs[0].id,
+                    isMinimized: playerState.isMinimized
+                };
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(resetState));
+                localStorage.setItem('bgm_repeat', 'false');
             }
-            _isInternalNav = false;
         });
 
         // 페이지 로드 시 초기화
