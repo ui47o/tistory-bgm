@@ -58,7 +58,7 @@
             background: var(--bgm-main);
             padding: 20px 25px;
             border-radius: 8px;
-			box-shadow: 0 0 15px 2px rgba(242, 242, 242, 0.5);
+			box-shadow: 0 0 2px 2px rgba(0, 0, 0, 0.05);
         }
         .player-title {
             margin: 0 0 10px 0;
@@ -226,7 +226,7 @@
             max-height: 200px;
             min-width: 180px;
             overflow-y: auto;
-            box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+            box-shadow: 0 0px 0px rgba(0,0,0,0.15);
             z-index: 9999;
             display: none;
         }
@@ -254,12 +254,15 @@
     </style>
 </head>
 <body>
+    <!-- 플레이리스트 팝업 -->
     <div class="playlist-panel" id="playlistPanel"></div>
 
+    <!-- 미니 플레이어 (최소화된 상태) -->
     <div class="mini-player hidden" id="miniPlayer" onclick="expandPlayer()">
         <i class="fas fa-music"></i>
     </div>
     
+    <!-- 메인 플레이어 -->
     <div class="bgm-wrapper" id="mainPlayer">
         <div class="bgm-player">
             <button class="minimize-btn" onclick="minimizePlayer()">
@@ -268,8 +271,10 @@
 
             <div id="player"></div>
             
+            <!-- 현재 재생 중인 곡 제목 표시 (클릭 시 플레이리스트) -->
             <div class="current-song-title" id="currentSongTitle" onclick="togglePlaylist()" style="cursor:pointer;">곡을 선택해주세요</div>
             
+            <!-- 프로그레스 바 -->
             <div class="progress-container">
                 <div class="progress-bar" id="progressBar">
                     <div class="progress-fill" id="progressFill"></div>
@@ -280,6 +285,8 @@
                     <span id="totalTime">0:00</span>
                 </div>
             </div>
+
+            
 
             <div class="control-buttons">
                 <button class="control-btn" onclick="prevSong()" title="이전 곡">
@@ -347,45 +354,45 @@
 	
     <script>
     document.addEventListener('DOMContentLoaded', function() {
-        // MutationObserver 설정
-        const observer = new MutationObserver(function(mutations) {
-            mutations.forEach(function(mutation) {
-                if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
-                    const miniPlayer = document.querySelector('.mini-player');
-                    const bgmWrapper = document.querySelector('.bgm-wrapper');
-                    
-                    // .mini-player에 .hidden 클래스가 제거됐을 경우 (보이게 됐을 경우)
-                    if (miniPlayer && !miniPlayer.classList.contains('hidden')) {
-                        window.parent.postMessage({ action: 'minimize' }, '*');
-                    }
-                    
-                    // .bgm-wrapper에 .hidden 클래스가 제거됐을 경우 (보이게 됐을 경우)
-                    if (bgmWrapper && !bgmWrapper.classList.contains('hidden')) {
-                        window.parent.postMessage({ action: 'expand' }, '*');
-                    }
+    // MutationObserver 설정
+    const observer = new MutationObserver(function(mutations) {
+        mutations.forEach(function(mutation) {
+            if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
+                const miniPlayer = document.querySelector('.mini-player');
+                const bgmWrapper = document.querySelector('.bgm-wrapper');
+                
+                // .mini-player에 .hidden 클래스가 제거됐을 경우 (보이게 됐을 경우)
+                if (miniPlayer && !miniPlayer.classList.contains('hidden')) {
+                    window.parent.postMessage({ action: 'minimize' }, '*');
                 }
-            });
+                
+                // .bgm-wrapper에 .hidden 클래스가 제거됐을 경우 (보이게 됐을 경우)
+                if (bgmWrapper && !bgmWrapper.classList.contains('hidden')) {
+                    window.parent.postMessage({ action: 'expand' }, '*');
+                }
+            }
         });
-        
-        // 감시할 대상 요소들
-        const miniPlayer = document.querySelector('.mini-player');
-        const bgmWrapper = document.querySelector('.bgm-wrapper');
-        
-        // 옵저버 설정 (클래스 변경 감시)
-        if (miniPlayer) {
-            observer.observe(miniPlayer, { attributes: true });
-        }
-        if (bgmWrapper) {
-            observer.observe(bgmWrapper, { attributes: true });
-        }
-        
-        // 초기 상태 확인 및 메시지 전송
-        if (miniPlayer && !miniPlayer.classList.contains('hidden')) {
-            window.parent.postMessage({ action: 'minimize' }, '*');
-        } else if (bgmWrapper && !bgmWrapper.classList.contains('hidden')) {
-            window.parent.postMessage({ action: 'expand' }, '*');
-        }
     });
+    
+    // 감시할 대상 요소들
+    const miniPlayer = document.querySelector('.mini-player');
+    const bgmWrapper = document.querySelector('.bgm-wrapper');
+    
+    // 옵저버 설정 (클래스 변경 감시)
+    if (miniPlayer) {
+        observer.observe(miniPlayer, { attributes: true });
+    }
+    if (bgmWrapper) {
+        observer.observe(bgmWrapper, { attributes: true });
+    }
+    
+    // 초기 상태 확인 및 메시지 전송
+    if (miniPlayer && !miniPlayer.classList.contains('hidden')) {
+        window.parent.postMessage({ action: 'minimize' }, '*');
+    } else if (bgmWrapper && !bgmWrapper.classList.contains('hidden')) {
+        window.parent.postMessage({ action: 'expand' }, '*');
+    }
+});
     </script>
     
     <script>
@@ -398,8 +405,15 @@
         // 플레이리스트 변경
         // 여러 곡 추가 가능
         const songs = [
-            { id: "hFg3WRqpQmg", title: "Cynic" },
-            { id: "dSw8CucthGc", title: "炉心融解" },
+            { id: "TcpHf_vUzvA", title: "地球の裏" },
+			{ id: "cVTvWzLjm5c", title: "プロトディスコ" },
+			{ id: "A2Pk5-o019k", title: "リコレクションエンドロウル" },
+
+            // id 뒤 따옴표 안에 유튜브 링크 중 ★일부 복붙★
+            // 공유 눌렀을 때 나오는 링크에
+            // ?si=어쩌고 앞에 적혀있는 ★11글자★
+
+            // title은 제목 (플레이어에 보이게 될 제목)
         ];
 
         // 상태 키 설정
@@ -546,8 +560,8 @@
                     'playsinline': 1,
                     'controls': 0,
                     'start': Math.floor(playerState.currentTime),
-                    'autoplay': 0, // 로딩 시 볼륨 튀는 현상 방지를 위해 강제로 0
-                    'mute': 1      // 로딩 시 볼륨 튀는 현상 방지를 위해 강제로 1(음소거)
+                    'autoplay': playerState.isPlaying ? 1 : 0,
+                    'mute': 0
                 },
                 events: {
                     'onReady': onPlayerReady,
@@ -557,12 +571,9 @@
         }
 
         function onPlayerReady(event) {
-            // 1. 초기 볼륨을 저장된 상태로 설정
+            // 초기 볼륨 설정
             player.setVolume(playerState.volume);
             document.getElementById('volumeSlider').value = playerState.volume;
-
-            // 2. 볼륨 세팅 완료 후 음소거 해제
-            player.unMute();
 
             // 현재 선택된 곡 설정
             if (playerState.currentSongId) {
@@ -572,7 +583,7 @@
             // 반복 UI 복원
             applyRepeatUI();
 
-            // 3. 이전에 재생 중이었다면 안전하게 다시 재생
+            // 이전에 재생 중이었다면 다시 재생 (실패 시 재시도)
             if (playerState.isPlaying) {
                 player.playVideo();
                 let retries = 0;
